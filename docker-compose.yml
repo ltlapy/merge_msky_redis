@@ -1,19 +1,34 @@
 version: "3"
 services:
     app:
-        image: python
-        command: ./entrypoint.sh
+        image: pypy:3.10
+        command: /app/entrypoint.sh
         restart: "no"
         volumes:
             - .:/app/
-        depends_on:
+        links:
             - redis1
             - redis2
+        depends_on:
+            redis1:
+                condition: service_healthy
+            redis2:
+                condition: service_healthy
     redis1:
         image: redis:7-alpine
         volumes:
-            - ./redis/dump1.rdb:/data/dump.rdb
+            - ./redis1:/data
+        command: redis-server --save ""
+        healthcheck:
+            test: "redis-cli ping"
+            interval: 5s
+            retries: 20
     redis2:
         image: redis:7-alpine
         volumes:
-            - ./redis/dump2.rdb:/data/dump.rdb
+            - ./redis2:/data
+        command: redis-server --save ""
+        healthcheck:
+            test: "redis-cli ping"
+            interval: 5s
+            retries: 20
