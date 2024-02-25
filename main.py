@@ -64,8 +64,8 @@ for key in tqdm(lastnoti2 - lastnoti1):
 log("list를 병합하고 내림차순으로 정렬합니다...")
 
 # List 타입의 모든 키 검색
-list_key1 = set(key for key in r1_keys if r1.type(key) == b'list')
-list_key2 = set(key for key in r2_keys if r2.type(key) == b'list')
+list_key1 = set(key for key in r1_keys if r1.type(key) == b'list' and b':list:userListTimeline:' not in key)
+list_key2 = set(key for key in r2_keys if r2.type(key) == b'list' and b':list:userListTimeline:' not in key)
 
 for key in tqdm(list_key1 & list_key2):
     # log(key)
@@ -83,6 +83,11 @@ for key in tqdm(list_key2 - list_key1):
     b = set(r2.lrange(key, 0, -1))
     r1.rpush(key, *b)
 
+# ! 어째선지 오작동하는 UserListTimeline만 날립니다
+list_key1 = set(key for key in r1_keys if b':list:userListTimeline:')
+
+for key in tqdm(list_key1):
+    r1.delete(key)
 
 # * stream은 병합하고 오름차순으로 정렬한다
 # duplicated_list = list_key1 & list_key2
