@@ -1,0 +1,19 @@
+version: "3"
+services:
+    app:
+        image: python
+        command: ./entrypoint.sh
+        restart: "no"
+        volumes:
+            - .:/app/
+        depends_on:
+            - redis1
+            - redis2
+    redis1:
+        image: redis:7-alpine
+        volumes:
+            - ./redis/dump1.rdb:/data/dump.rdb
+    redis2:
+        image: redis:7-alpine
+        volumes:
+            - ./redis/dump2.rdb:/data/dump.rdb
