@@ -96,6 +96,7 @@ list_key2 = set(key for key in r2_keys if r2.type(key) == b'stream')
 log("stream을 병합하고 오름차순으로 정렬합니다...")
 for key in tqdm(list_key1 & list_key2):
     # queue는 생략 (hash migration not implemented)
+    # NOTE: 이거 작성한 시점으로 queue를 제외한 것은 Timeline계밖에 없음
     if b':queue:' in key:
         continue
 
@@ -124,9 +125,9 @@ for key in tqdm(list_key1 & list_key2):
     while b_idx < len(b):
         records.append(b[b_idx][1])
         b_idx += 1
-
+        
     r1.delete(key)
-    for data in records:
+    for data in sorted(records, key=lambda x: x[b'data'][7:17]):
         r1.xadd(key, data)
         
     
