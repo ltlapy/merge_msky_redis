@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import redis
+from tqdm import tqdm
 
 log = print
 
@@ -43,8 +44,8 @@ log("latestReadNotification을 최신으로 갱신합니다...")
 lastnoti1 = set(key for key in r1_keys if b':latestReadNotification:' in key)
 lastnoti2 = set(key for key in r2_keys if b':latestReadNotification:' in key)
 
-for key in lastnoti1 & lastnoti2:
-    log(key)
+for key in tqdm(lastnoti1 & lastnoti2):
+    # log(key)
     a = r1.get(key)
     b = r2.get(key)
     r1.set(key, max(a, b))
@@ -52,8 +53,8 @@ for key in lastnoti1 & lastnoti2:
 log("latestReadNotification 중복을 제외한 값을 삽입합니다...")
 
 # 둘 중 하나에만 있는 거는 일단 넣고 본다
-for key in lastnoti2 - lastnoti1:
-    log(key)
+for key in tqdm(lastnoti2 - lastnoti1):
+    # log(key)
     val = r2.get(key)
     r1.set(key, max(a, b))
 
@@ -66,8 +67,8 @@ log("list를 병합하고 내림차순으로 정렬합니다...")
 list_key1 = set(key for key in r1_keys if r1.type(key) == b'list')
 list_key2 = set(key for key in r2_keys if r2.type(key) == b'list')
 
-for key in list_key1 & list_key2:
-    log(key)
+for key in tqdm(list_key1 & list_key2):
+    # log(key)
     a = set(r1.lrange(key, 0, -1))
     b = set(r2.lrange(key, 0, -1))
     sorted_values = sorted(a | b, reverse=True)
@@ -77,8 +78,8 @@ for key in list_key1 & list_key2:
 
 log("list 중복을 제외한 값을 삽입합니다...")
 # 둘 중 하나에만 있는 거는 일단 넣고 본다
-for key in list_key2 - list_key1:
-    log(key)
+for key in tqdm(list_key2 - list_key1):
+    # log(key)
     b = set(r2.lrange(key, 0, -1))
     r1.rpush(key, *b)
 
@@ -86,18 +87,19 @@ for key in list_key2 - list_key1:
 # * stream은 병합하고 오름차순으로 정렬한다
 # duplicated_list = list_key1 & list_key2
 # unique_list = list_key2 - list_key1
-log("stream을 병합하고 오름차순으로 정렬합니다...")
+log("stream을 가져옵니다...")
 
 # stream 타입의 모든 키 검색
 list_key1 = set(key for key in r1_keys if r1.type(key) == b'stream')
 list_key2 = set(key for key in r2_keys if r2.type(key) == b'stream')
 
-for key in list_key1 & list_key2:
+log("stream을 병합하고 오름차순으로 정렬합니다...")
+for key in tqdm(list_key1 & list_key2):
     # queue는 생략 (hash migration not implemented)
     if b':queue:' in key:
         continue
 
-    log(key)
+    # log(key)
     a = r1.xrange(key)
     b = r2.xrange(key)
     records = []
@@ -118,7 +120,7 @@ for key in list_key1 & list_key2:
             b_idx += 1
     while a_idx < len(a):
         records.append(a[a_idx][1])
-        b_idx += 1
+        a_idx += 1
     while b_idx < len(b):
         records.append(b[b_idx][1])
         b_idx += 1
@@ -126,12 +128,14 @@ for key in list_key1 & list_key2:
     r1.delete(key)
     for data in records:
         r1.xadd(key, data)
+        
+    
 
 log("stream 중복되지 않은 값을 이동합니다...")
 # 둘 중 하나에만 있는 거는 일단 넣고 본다
-for key in list_key2 - list_key1:
-    log(key)
-    b = set(r2.xrange(key))
+for key in tqdm(list_key2 - list_key1):
+    # log(key)
+    b = r2.xrange(key)
     for data in b:
         r1.xadd(key, data[1])  # [0] id를 제외하고 삽입
 
